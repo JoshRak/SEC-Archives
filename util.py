@@ -1,3 +1,4 @@
+import pandas as pd
 import psycopg2
 
 def bulk_insert(df, table, pre_sql):
@@ -20,7 +21,12 @@ def execute_sql(query):
     conn.autocommit = True
     cursor = conn.cursor()
     cursor.execute(query)
-    conn.close()
+    if cursor.description is not None:
+        rows = cursor.fetchall()
+        cols = [col[0] for col in cursor.description]
+        conn.close()
+        df = pd.DataFrame(rows, columns=cols)
+        return df
 
 def get_default_headers():
     return {

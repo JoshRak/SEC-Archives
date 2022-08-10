@@ -22,7 +22,7 @@ def parse_all(allowed_ciks):
         for filename in f.namelist():
             if any(cik in filename for cik in allowed_ciks):
                 data = json.loads(f.read(filename))
-                df = df.append(parse_submission(filename, data, ['10-K']))
+                df = df.append(parse_submission(filename, data, ['10-K', '10-Q']))
     pre_sql = '''TRUNCATE archive.submissions'''
     bulk_insert(df, "submissions", pre_sql)
 
@@ -68,6 +68,7 @@ def get_xbrl_location(cik, accessionNumber):
             next = True
     return ""
 
+
 if __name__ == "__main__":
-    # get_submissions()
+    get_submissions()
     parse_all(["0000320193", "0000789019"])
