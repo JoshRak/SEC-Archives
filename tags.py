@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import xml.etree.ElementTree as ET
 import re
+from bs4 import BeautifulSoup
 
 
 def get_submissions():
@@ -19,6 +20,7 @@ def parse_all(df):
     unit_df = pd.DataFrame(columns=["adsh", "unitid", "measure", "numerator", "denominator"])
     context_df = pd.DataFrame(columns=["adsh", "contextid", "startdate", "enddate", "instantdate", "dimension", "tag"])
     for i, row in df.iterrows():
+        print(i)
         report = get_xbrl_report(row['cik'], row['adsh'], row['xbrldocument'])
         tag_df_report, unit_df_report, context_df_report = parse_report(report, row['adsh'])
         tag_df = tag_df.append(tag_df_report)
@@ -98,15 +100,34 @@ def parse_report(report, adsh):
         elif child.text is None:
             pass
         else:
+            text = child.text.strip()
             try:
-                value = float(child.text)
+                value = float(text)
                 row = {"adsh": adsh, "taxonomy": taxonomy, "tagname": name,
                        "contextref": child.attrib.get("contextRef", ""),
-                       "unitref": child.attrib.get("unitRef", ""), "value": value}
+                       "unitref": child.attrib.get("unitRef", ""), "value": value,
+                       "isnumeric": 'true'
+                       }
                 tag_df = tag_df.append(row, ignore_index=True)
             except ValueError:
-                pass
+                if text != '' and not is_html(text):
+                    row = {"adsh": adsh, "taxonomy": taxonomy, "tagname": name,
+                           "contextref": child.attrib.get("contextRef", ""),
+                           "unitref": child.attrib.get("unitRef", ""), "value": text,
+                           "isnumeric": 'false'
+                           }
+                    tag_df = tag_df.append(row, ignore_index=True)
+                else:
+                    row = {"adsh": adsh, "taxonomy": taxonomy, "tagname": name,
+                           "contextref": child.attrib.get("contextRef", ""),
+                           "unitref": child.attrib.get("unitRef", ""), "value": "html",
+                           "isnumeric": 'false'
+                           }
+                    tag_df = tag_df.append(row, ignore_index=True)
     return tag_df, unit_df, context_df
+
+def is_html(text):
+    return bool(BeautifulSoup(text, "html.parser").find())
 
 
 if __name__ == "__main__":
